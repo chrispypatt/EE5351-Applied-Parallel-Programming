@@ -12,13 +12,10 @@
 __global__ void VectorAddKernel(Vector A, Vector B, Vector C)
 {
 	//Add the two vectors
-	// unsigned x = threadIdx.x + blockIdx.x * blockDim.x;
-    // unsigned y = threadIdx.y + blockIdx.y * blockDim.y;
-    // unsigned idx = x + y;
-    // if(x < A && y < B) {
-    //    C[idx] = A[idx] + B[idx];
-    // } 
-
+    int i = threadIdx.x + blockDim.x * blockIdx.x;
+    if(i < VSIZE) {
+       C.elements[i] = A.elements[i] + B.elements[i];
+    } 
 }
 
 #endif // #ifndef _VECTORADD_KERNEL_H_

@@ -71,7 +71,6 @@ int main(int argc, char** argv) {
 			return 1;
 		}
 	}
-
 	// A + B on the device
     VectorAddOnDevice(A, B, C);
     
@@ -115,7 +114,7 @@ int main(int argc, char** argv) {
 ////////////////////////////////////////////////////////////////////////////////
 void VectorAddOnDevice(const Vector A, const Vector B, Vector C)
 {
-	//Interface host call to the device kernel code and invoke the kernel
+    //Interface host call to the device kernel code and invoke the kernel
 
     //* steps:
     //* 1. allocate device vectors d_A, d_B and d_C with length same as input vectors
@@ -126,21 +125,17 @@ void VectorAddOnDevice(const Vector A, const Vector B, Vector C)
     //* 2. copy A to d_A, B to d_B
     CopyToDeviceVector(d_A,A);
     CopyToDeviceVector(d_B,B);
-    CopyToDeviceVector(d_C,C);
 
     //* 3. launch kernel to compute d_C = d_A + d_B
-    VectorAddKernel(d_A,d_B,d_C);
+    VectorAddKernel<<<ceil(VSIZE/256.0), VSIZE>>>(d_A,d_B,d_C);
 
     //* 4. copy d_C back to host vector C
     CopyFromDeviceVector(C,d_C);
 
     //* 5. free device vectors d_A, d_B, d_C
-    free(d_A.elements);
-    d_A.elements = NULL;
-    free(d_B.elements);
-    d_B.elements = NULL;
-    free(d_C.elements);
-    d_C.elements = NULL;
+    cudaFree(&d_A);
+    cudaFree(&d_B);
+    cudaFree(&d_C);
 }
 
 // Allocate a device vector of same size as V.
