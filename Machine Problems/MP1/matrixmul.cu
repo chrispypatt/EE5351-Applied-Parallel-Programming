@@ -109,6 +109,29 @@ void MatrixMulOnDevice(const Matrix M, const Matrix N, Matrix P)
 {
     //Interface host call to the device kernel code and invoke the kernel
 
+    //* steps:
+    //* 1. allocate device matricies d_M, d_N and d_P with length same as input matricies
+    Matrix d_M  = AllocateDeviceMatrix(M);
+    Matrix d_N  = AllocateDeviceMatrix(N);
+    Matrix d_P  = AllocateDeviceMatrix(P);
+
+    //* 2. copy M to d_M, N to d_N
+    CopyToDeviceMatrix(d_M, M);
+    CopyToDeviceMatrix(d_N, N);
+
+    //* 3. launch kernel to compute d_P = d_M * d_N
+    dim3 dimGrid(1, 1, 1);
+    dim3 dimBlock(WP, HP, 1);
+
+    MatrixMulKernel<<<dimGrid, dimBlock>>>(d_M, d_N, d_P);
+
+    //* 4. copy d_P back to host vector P
+    CopyFromDeviceMatrix(P,d_P);
+
+    //* 5. free device vectors d_M, d_N and d_P
+    cudaFree(&d_M);
+    cudaFree(&d_N);
+    cudaFree(&d_P);
 
 
 }
