@@ -2,6 +2,20 @@ Simple Matrix Multiplication
 
 1.  How many times is each element of the input matrices loaded during the execution of the kernel?
 
+    Each element is loaded 32 times during the execution of the kernel. This is due to
+    the fact that we have 32x32 threads, one thread per calculation of a datapoint in 
+    the output matrix P. For every point in the 0 row of our P matrix (32 in total), the thread calculating
+    that point will load the first row of the input matrix M. This is the same for each subsequent 
+    row in the P matrix. 
+
+    Similarly for every point in the 0 column of our P matrix, the thread calculating the 
+    point will load the first column of the input matrix N. Again, this is the same for each column 
+    in the P matrix.
+
+    Thus the number of loads for each element in the input M matrix is determined by the width of 
+    P, in our case 32. The number of loads for each element in the input matrix N is determined by
+    the height of P, in our case 32 as well.
+
 
 
 2.  What is the memory-access to floating-point computation ratio in each thread?  
@@ -9,3 +23,13 @@ Simple Matrix Multiplication
     of the result.  Only global memory loads should be counted towards 
     your off-chip bandwidth
 
+    Each thread loads one row (size 32 elements) from matrix M and one column (size 32 elements)
+    form matrix N for a total of 64 memory-accesses, ignoring the storing of results. 
+
+    Each thread makes one addition and one multiplication floating-point computation per 
+    element pair between the row and column loaded in. This means there are 2*matrix_width,
+    or 64 floating-point operations.
+
+    Thus, there are 64 memory-accesses to 64 floating-point operations making a 1:1 ratio in each thread.
+
+    
