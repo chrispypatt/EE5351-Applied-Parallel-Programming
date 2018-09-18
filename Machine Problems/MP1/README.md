@@ -5,9 +5,9 @@ A simple matrix multiplication program. The purpose of this machine problem is t
 ## Running code:
 ```
 make
-
 ./matrixmul
 ```
+\* *Note the make file may need to be modified for use with your environment.*
 
 After the device multiplication is invoked, it will compute the correct
 solution matricies using the CPU, and compare that solution with the device computed solution. If it matches (within a certain tolerance), it will print

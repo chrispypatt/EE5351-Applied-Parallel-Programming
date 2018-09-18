@@ -5,9 +5,10 @@
 ## Running code:
 ```
 make
-
 ./vectoradd
 ```
+\* *Note the make file may need to be modified for use with your environment.*
+
 
 After the device addition is invoked, it will compute the correct
 solution vector using the CPU, and compare that solution with the device computed
