@@ -3,11 +3,11 @@
 "Hello World" of parallel programming. Modify code to perform vector addition using CUDA C. The purpose of this machine problem is to get familiar with writing, compiling and running CUDA programs
 
 ## Running code:
-'''
+```
 make
 
 ./vectoradd
-'''
+```
 
 After the device addition is invoked, it will compute the correct
 solution vector using the CPU, and compare that solution with the device computed
@@ -16,7 +16,7 @@ out “Test PASSED” to the screen before exiting, otherwise you will see "Test
 
 ## Arguments
 - *No arguemnts*
-   - The application will create two randomly initialized vectors to add. 
+   - the application will create two randomly initialized vectors to add. 
 - *One argument*
    - the application will use the random initialization to create the input vectors, and write the device-computed output to the file specified by the argument.
 - *Two arguments*
