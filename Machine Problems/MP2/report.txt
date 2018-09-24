@@ -1,0 +1,8 @@
+Tiled Matrix Multiplication
+
+    In your kernel implementation, how many threads can be simultaneously executing
+    on a GeForce GTX 1080 GPU, which contains 20 Streaming Multiprocessors. Use
+    nvcc --ptxas-options="-v" matrixmul_kernel.cu to see the resource usage of 
+    your kernel (although compilation will fail, it will only do so after
+    compiling the kernel and displaying the relevant information.)
+
