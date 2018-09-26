@@ -90,7 +90,7 @@ int main(int argc, char** argv) {
 	}
 	else if(argc == 2)
 	{
-	    WriteFile(P, argv[1]);
+        WriteFile(P, argv[1]);
 	}   
 
 	// Free matrices
@@ -117,10 +117,14 @@ void MatrixMulOnDevice(const Matrix M, const Matrix N, Matrix P)
     CopyToDeviceMatrix(Pd, P); // Clear memory
 
     // Setup the execution configuration
+        
+    //M*N=P -> M is nxm, N is mxp, P is nxp
+    //block is 16 element square matrix
 
-
+    dim3 dimGrid(ceil(double(P.width)/16.0), ceil(double(P.height)/16.0), 1);
+    dim3 dimBlock(16.0, 16.0, 1);
     // Launch the device computation threads!
-
+    MatrixMulKernel<<<dimGrid,dimBlock>>>(Md, Nd, Pd);
 
     // Read P from the device
     CopyFromDeviceMatrix(P, Pd); 

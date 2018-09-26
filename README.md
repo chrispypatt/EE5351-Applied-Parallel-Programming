@@ -4,6 +4,7 @@ Includes:
 
     -Machine Problems (mini-labs)
      - [x] MP0 - Parallel vector addition
-     - [ ] MP1 - Matrix multiplication
+     - [x] MP1 - Matrix multiplication
+     - [ ] MP2 - Tiled Matrix multiplication
 
     -Final Project

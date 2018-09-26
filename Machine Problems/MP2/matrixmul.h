@@ -10,6 +10,5 @@ typedef struct {
     float* elements;
 } Matrix;
 
-
 #endif // _MATRIXMUL_H_
 
