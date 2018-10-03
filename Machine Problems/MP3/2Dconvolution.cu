@@ -114,11 +114,14 @@ void ConvolutionOnDevice(const Matrix M, const Matrix N, Matrix P)
     CopyToDeviceMatrix(Pd, P); // Clear memory
 
     // Setup the execution configuration
-
-
+    //copy Md to const memory
+    cudaMemcpyToSymbol(Mc,Md.elements,KERNEL_SIZE*KERNEL_SIZE*sizeof(float));
+    //TODO: Check correct grid and block size
+    dim3 dimGrid(BLOCK_SIZE,BLOCK_SIZE, 1);
+    dim3 dimBlock(TILE_SIZE, TILE_SIZE, 1);
 
     // Launch the device computation threads!
-
+    ConvolutionKernel<<<dimGrid, dimBlock>>>(Nd, Pd);
 
     // Read P from the device
     CopyFromDeviceMatrix(P, Pd); 
