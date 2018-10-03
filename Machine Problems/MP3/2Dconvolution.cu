@@ -96,16 +96,17 @@ int main(int argc, char** argv) {
 	return 0;
 }
 
-
 ////////////////////////////////////////////////////////////////////////////////
 //! Run a simple test for CUDA
 ////////////////////////////////////////////////////////////////////////////////
 void ConvolutionOnDevice(const Matrix M, const Matrix N, Matrix P)
 {
     // Load M and N to the device
-    Matrix Md = AllocateDeviceMatrix(M);
-    CopyToDeviceMatrix(Md, M);
- 
+    // Matrix Md = AllocateDeviceMatrix(M);
+    // CopyToDeviceMatrix(Md, M);
+    //copy Md to const memory
+    cudaMemcpyToSymbol(Mc,M.elements,M.width*M.height*sizeof(float));
+
     Matrix Nd = AllocateDeviceMatrix(N);
     CopyToDeviceMatrix(Nd, N);
 
@@ -114,13 +115,10 @@ void ConvolutionOnDevice(const Matrix M, const Matrix N, Matrix P)
     CopyToDeviceMatrix(Pd, P); // Clear memory
 
     // Setup the execution configuration
-    //copy Md to const memory
-    cudaMemcpyToSymbol(Mc,Md.elements,KERNEL_SIZE*KERNEL_SIZE*sizeof(float));
-    //TODO: Check correct grid and block size
-    double gridWidth = ceil(double(P.width)/double(TILE_SIZE));
-    double gridHeight = ceil(double(P.height)/double(TILE_SIZE));
+    float gridWidth = ceil((float)P.width/TILE_SIZE);
+    float gridHeight = ceil((float)P.height/TILE_SIZE);
     dim3 dimGrid(gridWidth,gridHeight, 1);
-    dim3 dimBlock(BLOCK_SIZE, BLOCK_SIZE);
+    dim3 dimBlock(BLOCK_SIZE, BLOCK_SIZE,1);
 
     // Launch the device computation threads!
     ConvolutionKernel<<<dimGrid, dimBlock>>>(Nd, Pd);
@@ -129,7 +127,7 @@ void ConvolutionOnDevice(const Matrix M, const Matrix N, Matrix P)
     CopyFromDeviceMatrix(P, Pd); 
 
     // Free device matrices
-    FreeDeviceMatrix(&Md);
+    // FreeDeviceMatrix(&Md);
     FreeDeviceMatrix(&Nd);
     FreeDeviceMatrix(&Pd);
 
