@@ -11,32 +11,33 @@ __global__ void ConvolutionKernel(Matrix N, Matrix P)
 
     int ty = threadIdx.y, tx = threadIdx.x;
 
-    //This thread will compute P[Prow][Pcol]
-    int Pcol = blockIdx.x * TILE_SIZE + tx;
-    int Prow = blockIdx.y * TILE_SIZE + ty; 
+    //thread index mapping into output matrix P[row_P][col_P]
+    int col_P = blockIdx.x * TILE_SIZE + tx;
+    int row_P = blockIdx.y * TILE_SIZE + ty; 
 
-    //Get the thread's row and col for loading N image
-    //TODO: Double check this grabs correct elements from tile
-    int Ncol = Pcol - KS_DIV_2;
-    int Nrow = Prow - KS_DIV_2;
+    //thread indexing for loading N with ghosts 👻 and halos
+    int col_N = col_P - KS_DIV_2;
+    int row_N = row_P - KS_DIV_2;
 
-    //Load in this tile of N (set to zero if element outside matrix)
-    if((Ncol > -1 && Ncol < N.width) && (Nrow > -1 && Nrow < N.height)){
-        N_s[tx][ty] = N[Nrow*N.width+Ncol];
-    }else{
-        N_s[tx][ty] = 0.0;
+    //Load tile from input
+    if((col_N > -1 && col_N < N.width) && (row_N > -1 && row_N < N.height)){
+        N_s[ty][tx] = N.elements[row_N*N.width+col_N];
+    }else{//If outside of bounds, load ghost 👻 cell 
+        N_s[ty][tx] = 0.0;
     }
     __syncthreads();
 
     float Pvalue = 0.0; 
-    for (int a = 0; a < KERNEL_SIZE; a++) { //traverse filter by row (a = filter row)
-        for (int b = 0; b < KERNEL_SIZE; b++) { //traverse each row by col (b = filter col)
-        //TODO: Finish this indexing for calculation
-            Pvalue += Mc[a*KERNEL_SIZE+b]*N_s[row + a − 2][col + b − 2];
-        }
-    } 
-    if(Pcol < P.width && Prow < P.height){ //If thread is within bounds of P output
-        P.elements[Prow*KERNEL_SIZE+Pcol] = Pvalue; 
+    if (ty < TILE_SIZE && tx < TILE_SIZE){
+        for (int a = 0; a < KERNEL_SIZE; a++) { //traverse filter by row (a = filter row)
+            for (int b = 0; b < KERNEL_SIZE; b++) { //traverse each row by col (b = filter col)
+                Pvalue += Mc[a*KERNEL_SIZE+b]*N_s[a+ty][b+tx];
+            }
+        } 
+    }
+    
+    if(col_P < P.width && row_P < P.height){ //If thread is within bounds of P output
+        P.elements[row_P*P.width+col_P] = Pvalue; 
     }
 }
 
