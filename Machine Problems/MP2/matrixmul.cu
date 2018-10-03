@@ -119,10 +119,10 @@ void MatrixMulOnDevice(const Matrix M, const Matrix N, Matrix P)
     // Setup the execution configuration
         
     //M*N=P -> M is nxm, N is mxp, P is nxp
-    //block is 16 element square matrix
+    //block is 32 element square matrix when TILE_WIDTH = 32
 
-    dim3 dimGrid(ceil(double(P.width)/16.0), ceil(double(P.height)/16.0), 1);
-    dim3 dimBlock(16.0, 16.0, 1);
+    dim3 dimGrid(ceil(double(P.width)/double(TILE_WIDTH)), ceil(double(P.height)/double(TILE_WIDTH)), 1);
+    dim3 dimBlock(TILE_WIDTH, TILE_WIDTH, 1);
     // Launch the device computation threads!
     MatrixMulKernel<<<dimGrid,dimBlock>>>(Md, Nd, Pd);
 

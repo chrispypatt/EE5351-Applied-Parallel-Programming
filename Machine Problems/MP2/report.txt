@@ -1,8 +1,21 @@
 Tiled Matrix Multiplication
 
-    In your kernel implementation, how many threads can be simultaneously executing
+ Q: In your kernel implementation, how many threads can be simultaneously executing
     on a GeForce GTX 1080 GPU, which contains 20 Streaming Multiprocessors. Use
     nvcc --ptxas-options="-v" matrixmul_kernel.cu to see the resource usage of 
     your kernel (although compilation will fail, it will only do so after
     compiling the kernel and displaying the relevant information.)
 
+    *architecture information obtained from https://en.wikipedia.org/wiki/CUDA
+
+A:  I am using a tile size of 32x32 so my two shared memory
+    take up 8kB of shared memory per thread block (our architecture has max of 48kB per thread block).
+    The GTX 1080 GPU has 96kB of shared memory per SM. 
+     
+    The shared memory usage says we could have up to 12 thread blocks (8kB * 12 = 96kB) but each thread block 
+    has 1024 threads (32x32). From the wiki, our architecture supports up to 2048 threads per SM. This limits the
+    thread blocks per SM to 2 (2*1024 = 2048 threads).
+
+    The GTX 1080 GPU has 20 SMs so if each SM can run up to 2 thread blocks at a time there can be 40 thread 
+    blocks simultaneously executing. With 32x32 threads per block in my program, up to 40x32x32 threads are 
+    executing simultaneously or 40,960 threads.

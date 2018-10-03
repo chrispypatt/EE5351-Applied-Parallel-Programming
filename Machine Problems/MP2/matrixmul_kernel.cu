@@ -7,14 +7,13 @@
 
 #include <stdio.h>
 #include "matrixmul.h"
+#define TILE_WIDTH 32
 
 // Matrix multiplication kernel thread specification
 __global__ void MatrixMulKernel(Matrix M, Matrix N, Matrix P)
 {
-    double TILE_WIDTH = 16.0;
-
-    __shared__ float shared_M[16][16];
-    __shared__ float shared_N[16][16];
+    __shared__ float shared_M[TILE_WIDTH][TILE_WIDTH];
+    __shared__ float shared_N[TILE_WIDTH][TILE_WIDTH];
 
     //Get block and thread idxs to load in tiles
     int by = blockIdx.y, bx = blockIdx.x, tx = threadIdx.x, ty = threadIdx.y;
@@ -23,7 +22,7 @@ __global__ void MatrixMulKernel(Matrix M, Matrix N, Matrix P)
     int p_col = bx*TILE_WIDTH+tx;
     float Pvalue = 0;
     
-    for (int m = 0; m < ceil(double(M.width)/TILE_WIDTH); ++m){
+    for (int m = 0; m < ceil(double(M.width)/double(TILE_WIDTH)); ++m){
         int M_col = m * TILE_WIDTH + tx;
         int N_row = m * TILE_WIDTH + ty;
         //Each thread fill up piece of shared memory.
