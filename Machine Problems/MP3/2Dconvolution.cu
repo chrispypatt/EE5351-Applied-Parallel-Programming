@@ -74,7 +74,23 @@ int main(int argc, char** argv) {
     
     // compute the matrix multiplication on the CPU for comparison
     Matrix reference = AllocateMatrix(P.height, P.width, 0);
+
+    //setup timer
+    cudaEvent_t start, stop;
+    float time;
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
+    cudaEventRecord( start, 0 );
+
     computeGold(reference.elements, M.elements, N.elements, N.height, N.width);
+
+    //stop timer and report
+    cudaEventRecord( stop, 0 );
+    cudaEventSynchronize( stop );
+    cudaEventElapsedTime( &time, start, stop );
+    printf("CPU calculation time: %f ms\n", time);
+    cudaEventDestroy( start );
+    cudaEventDestroy( stop );
         
     // in this case check if the result is equivalent to the expected soluion
     bool res = CompareMatrices(reference, P);
@@ -101,12 +117,21 @@ int main(int argc, char** argv) {
 ////////////////////////////////////////////////////////////////////////////////
 void ConvolutionOnDevice(const Matrix M, const Matrix N, Matrix P)
 {
-    // Load M and N to the device
-    // Matrix Md = AllocateDeviceMatrix(M);
-    // CopyToDeviceMatrix(Md, M);
+    //setup both timers
+    cudaEvent_t start, stop, startOH, stopOH;
+    float gpuTime = 0, gpuPlusOverhead = 0;
+    cudaEventCreate(&startOH);
+    cudaEventCreate(&stopOH);
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
+
+    //start kernel + host overhead timer
+    cudaEventRecord( startOH, 0 );
+
     //copy Md to const memory
     cudaMemcpyToSymbol(Mc,M.elements,M.width*M.height*sizeof(float));
 
+    // Load N to the device
     Matrix Nd = AllocateDeviceMatrix(N);
     CopyToDeviceMatrix(Nd, N);
 
@@ -115,21 +140,41 @@ void ConvolutionOnDevice(const Matrix M, const Matrix N, Matrix P)
     CopyToDeviceMatrix(Pd, P); // Clear memory
 
     // Setup the execution configuration
-    float gridWidth = ceil((float)P.width/TILE_SIZE);
-    float gridHeight = ceil((float)P.height/TILE_SIZE);
+    double gridWidth = ceil(double(P.width)/double(TILE_SIZE));
+    double gridHeight = ceil(double(P.height)/double(TILE_SIZE));
     dim3 dimGrid(gridWidth,gridHeight, 1);
     dim3 dimBlock(BLOCK_SIZE, BLOCK_SIZE,1);
 
+    //Start kernel only timer
+    cudaEventRecord( start, 0 );
+
     // Launch the device computation threads!
     ConvolutionKernel<<<dimGrid, dimBlock>>>(Nd, Pd);
+    //Because kernel is async
+    cudaDeviceSynchronize();
+
+    //Stop kernel timer. Report later
+    cudaEventRecord( stop, 0 );
+    cudaEventSynchronize( stop );
+    cudaEventElapsedTime( &gpuTime, start, stop );
 
     // Read P from the device
     CopyFromDeviceMatrix(P, Pd); 
 
     // Free device matrices
-    // FreeDeviceMatrix(&Md);
     FreeDeviceMatrix(&Nd);
     FreeDeviceMatrix(&Pd);
+
+    //stop kernel+host timer and report
+    cudaEventRecord( stopOH, 0 );
+    cudaEventSynchronize( stopOH );
+    cudaEventElapsedTime( &gpuPlusOverhead, startOH, stopOH );
+    printf("GPU calculation time + overhead: %f ms\n", gpuPlusOverhead);
+    printf("GPU calculation time: %f ms\n", gpuTime);
+    cudaEventDestroy( start );
+    cudaEventDestroy( stop );
+    cudaEventDestroy( startOH );
+    cudaEventDestroy( stopOH );
 
 }
 

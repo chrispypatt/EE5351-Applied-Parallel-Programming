@@ -12,12 +12,12 @@ __global__ void ConvolutionKernel(Matrix N, Matrix P)
     int ty = threadIdx.y, tx = threadIdx.x;
 
     //thread index mapping into output matrix P[row_P][col_P]
-    int row_P = blockIdx.y * TILE_SIZE + ty; 
     int col_P = blockIdx.x * TILE_SIZE + tx;
+    int row_P = blockIdx.y * TILE_SIZE + ty; 
 
     //thread indexing for loading N with ghosts 👻 and halos
-    int row_N = row_P - KS_DIV_2;
     int col_N = col_P - KS_DIV_2;
+    int row_N = row_P - KS_DIV_2;
 
     //Load tile from input
     if((col_N >= 0 && col_N < N.width) && (row_N >= 0 && row_N < N.height)){

@@ -17,10 +17,23 @@ Tiled 2D Convolution
 
     1.  What is the measured floating-point computation rate for the CPU and GPU kernels 
     in this application?  How do they each scale with the size of the input? 
+    
+    Small input (32x32):
+    CPU: 0.080960ms
+    GPU (with overhead): 0.867200ms
 
+    Large input (1024x1024):
+    GPU (with overhead): 2.019328ms
+    CPU: 81.447296ms
 
     2.  How much time is spent as an overhead cost of using the GPU for
     computation?  Consider all code executed within your host function, with
     the exception of the kernel itself, as overhead.  How does the overhead scale 
     with the size of the input?
+    
+    small input
+    0.070656ms
+
+    large input
+    0.082112ms
 
