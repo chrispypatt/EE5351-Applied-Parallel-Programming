@@ -17,23 +17,75 @@ Tiled 2D Convolution
 
     1.  What is the measured floating-point computation rate for the CPU and GPU kernels 
     in this application?  How do they each scale with the size of the input? 
+
+    *Note: Stores are not counted for total floating point operation counts.
+
+    For calculating FLOPS on the CPU, a counter was placed inside the inner 
+    for loop of the convolution function and printed after the function 
+    completed. This counter was multiplied by 2 to account for both the add and
+    multiply operations. 
+
+    For the kernel function, some threads may participate in the calcualtion but
+    will be working partially with halo and ghost cells so there are more floating 
+    point operations. Thus the GPU total FLOP count was determined by the number of 
+    blocks*threads per block*matrix M size*2. This was done as shown below.
+
+    Per execution, there are:
+        - ceil(P.width/TILE_SIZE)*ceil(P.height/TILE_SIZE) blocks
+            (dependent on input size)
+        - TILE_SIZE*TILE_SIZE threads per block doing calculations
+            12*12 = 144 (independent from input size)
+        - KERNEL_SIZE*KERNEL_SIZE*2 floating point ops per thread
+            5*5*2 = 50 (independent from input size)
     
     Small input (32x32):
-    CPU: 0.080960ms
-    GPU (with overhead): 0.867200ms
+        -CPU: 0.099072ms
+            Floating point ops: 23716*2 (by counting loop execution of gold
+                                        x2 to accoutn for multiply and add)
+            FLOPS = 47432/.099072ms = 0.4787629 GFLOPS
+
+        -GPU (without overhead): 0.070656ms
+            Floating point ops = ceil(32/12)*ceil(32/12)*144*50 = 64800
+
+            FLOPS = 64800/0.070656ms = 0.9171196  GFLOPS
+
+
 
     Large input (1024x1024):
-    GPU (with overhead): 2.019328ms
-    CPU: 81.447296ms
+        -CPU: 86.308960ms
+            Floating point ops: 26152996*2 (by counting loop execution of gold
+                                            x2 to accoutn for multiply and add)
+            FLOPS = 52306000/86.308960ms = 0.6060321 GFLOPS
+
+        -GPU (without overhead): 0.0869448ms
+            Floating point ops = ceil(1024/12)*ceil(1024/12)*144*50 = 53251200
+                
+            FLOPS = 53251200/0.0869448ms = 612.4714 GFLOPS
+
+    Thus, for a 32x32 matrix input, the GPU processed at 0.9171196 GFLOPS and the
+    CPU at 0.4787629 GFLOPS. For a 1024x1024 matrix, the GPU processed at 612.4714 GFLOPS
+    and the CPU at 0.6060321 GFLOPS. We can see that as the input size increases, the GLOPS 
+    of the CPU increases only a small amount while the GPU GFLOPS increases very dramatically. 
+    The GPU sees over x500 performance increase. This will become less dramatic as input size 
+    increases and saturates the GPU's resources.
+
 
     2.  How much time is spent as an overhead cost of using the GPU for
     computation?  Consider all code executed within your host function, with
     the exception of the kernel itself, as overhead.  How does the overhead scale 
     with the size of the input?
+
+    The overhead time is calculated by subtracting the kernel time from the total time 
+    the host function takes to complete. A new test from part 1 was ran to collect this data.
     
     small input
-    0.070656ms
+    Overhead = 0.855808ms - 0.070656ms = 0.7851520ms
 
     large input
-    0.082112ms
+    Overhead = 12.1104ms - 0.86944ms = 11.2410ms
+
+    Here we see a over a x10 increase in overhead time. This is showing us the 
+    overhead grows as we increase the input size but it still scales better 
+    than the total CPU computation time as it is not near the increase we 
+    see in the CPU implementation.
 

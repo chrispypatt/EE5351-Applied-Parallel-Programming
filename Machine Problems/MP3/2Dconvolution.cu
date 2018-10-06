@@ -69,8 +69,24 @@ int main(int argc, char** argv) {
 		(void)ReadFile(&N, argv[3]);
 	}
 
+    //setup timer
+    cudaEvent_t startOH, stopOH;
+    float gpuPlusOverhead;
+    cudaEventCreate(&startOH);
+    cudaEventCreate(&stopOH);
+    cudaEventRecord( startOH, 0 );
+
 	// M * N on the device
     ConvolutionOnDevice(M, N, P);
+
+    //stop kernel+host timer and report
+    cudaEventRecord( stopOH, 0 );
+    cudaEventSynchronize( stopOH );
+    cudaEventElapsedTime( &gpuPlusOverhead, startOH, stopOH );
+    printf("GPU calculation time + overhead: %f ms\n", gpuPlusOverhead);
+    cudaEventDestroy( startOH );
+    cudaEventDestroy( stopOH );
+
     
     // compute the matrix multiplication on the CPU for comparison
     Matrix reference = AllocateMatrix(P.height, P.width, 0);
@@ -117,16 +133,12 @@ int main(int argc, char** argv) {
 ////////////////////////////////////////////////////////////////////////////////
 void ConvolutionOnDevice(const Matrix M, const Matrix N, Matrix P)
 {
-    //setup both timers
-    cudaEvent_t start, stop, startOH, stopOH;
-    float gpuTime = 0, gpuPlusOverhead = 0;
-    cudaEventCreate(&startOH);
-    cudaEventCreate(&stopOH);
+    //setup timer
+    cudaEvent_t start, stop;
+    float gpuTime = 0;
+
     cudaEventCreate(&start);
     cudaEventCreate(&stop);
-
-    //start kernel + host overhead timer
-    cudaEventRecord( startOH, 0 );
 
     //copy Md to const memory
     cudaMemcpyToSymbol(Mc,M.elements,M.width*M.height*sizeof(float));
@@ -165,16 +177,12 @@ void ConvolutionOnDevice(const Matrix M, const Matrix N, Matrix P)
     FreeDeviceMatrix(&Nd);
     FreeDeviceMatrix(&Pd);
 
-    //stop kernel+host timer and report
-    cudaEventRecord( stopOH, 0 );
-    cudaEventSynchronize( stopOH );
-    cudaEventElapsedTime( &gpuPlusOverhead, startOH, stopOH );
-    printf("GPU calculation time + overhead: %f ms\n", gpuPlusOverhead);
+    
+
     printf("GPU calculation time: %f ms\n", gpuTime);
     cudaEventDestroy( start );
     cudaEventDestroy( stop );
-    cudaEventDestroy( startOH );
-    cudaEventDestroy( stopOH );
+
 
 }
 

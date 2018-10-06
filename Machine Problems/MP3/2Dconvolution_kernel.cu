@@ -27,7 +27,8 @@ __global__ void ConvolutionKernel(Matrix N, Matrix P)
     }
     __syncthreads();
 
-    if (tx < TILE_SIZE && ty < TILE_SIZE){
+    if (tx < TILE_SIZE && ty < TILE_SIZE){ //TILE_SIZE*TILE_SIZE threads perform
+                                            //KERNEL_SIZE*KERNEL_SIZE*2 FLOP per block
         float Pvalue = 0.0; 
         for (int a = 0; a < KERNEL_SIZE; a++) { //traverse filter by row (a = filter row)
             for (int b = 0; b < KERNEL_SIZE; b++) { //traverse each row by col (b = filter col)

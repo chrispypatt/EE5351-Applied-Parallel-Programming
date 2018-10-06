@@ -1,5 +1,7 @@
 #include <stdlib.h>
 #include "2Dconvolution.h"
+#include <stdio.h>
+
 
 ////////////////////////////////////////////////////////////////////////////////
 // export C interface
@@ -32,7 +34,7 @@ computeGold(float* C, const float* A, const float* B, unsigned int hB, unsigned 
 			unsigned int nend = (j > (wB - (KS_DIV_2+1)))?
 									(wB-j) + KS_DIV_2 : KERNEL_SIZE;
 			// overlay A over B centered at element (i,j).  For each 
-			//  overlapping element, multiply the two and accumulate
+			//  overlapping element, multiply the two and accumulate 
 			for(unsigned int m = mbegin; m < mend; ++m) {
 				for(unsigned int n = nbegin; n < nend; n++) {
 				  sum += A[m * KERNEL_SIZE + n] * 
