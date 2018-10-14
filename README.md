@@ -6,6 +6,6 @@ Includes:
      - [x] MP0 - Parallel vector addition
      - [x] MP1 - Matrix multiplication
      - [x] MP2 - Tiled Matrix multiplication
-     - [ ] MP3 - 2D Convolution
+     - [x] MP3 - 2D Convolution
 
     -Final Project
