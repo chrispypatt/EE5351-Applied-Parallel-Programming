@@ -42,8 +42,8 @@ __global__ void MatrixMulKernel(Matrix M, Matrix N, Matrix P)
         for (int k = 0; k < TILE_WIDTH; ++k){
             //Perform calculation with what we now have in shared memory
             Pvalue += shared_M[ty][k] * shared_N[k][tx];
-            __syncthreads();
-        }
+		}
+		__syncthreads();
     }
     //Only if thread is in bounds of output matrix, save calculated value
     if (p_row < P.height && p_col < P.width){

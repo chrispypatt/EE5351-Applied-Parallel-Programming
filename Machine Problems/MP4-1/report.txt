@@ -1,0 +1,43 @@
+Data Parallel Reduction
+
+1.  How many times does your thread block synchronize to reduce its portion
+    of an array to a single value?
+
+	My thread block will synchronize every iteration of the for loop in the kernel.
+	Every iteration of the loop reduces the partialSum array in half until it is 
+	just one element. My partialSum array is 2*BLOCK_SIZE elements which I set 
+	BLOCK_SIZE = 512.
+
+	This means the block synchronizes log2(512) times or 9 times.
+	This would change if BLOCK_SIZE changes.
+
+	Technically I don't need syncthreads() for the final 5 steps (32 active threads and below)
+	as the threads are consecutive. This means they will run in the same warp but my kernel
+	does not perform any check for this condition. Doing this would make the kernel hardware
+	dependent and so I just synchronize for all 9 iterations.
+
+
+
+2.  What is the minimum, maximum, and average number of "real" operations
+    that a thread will perform? "Real" operations are those that directly
+    contribute to the final reduction value, i.e., iterations of the reduction
+    computation.
+
+	minimum - 1 'real' operation. This is because every iteration of the reduction
+	loop we lose half the threads doing operations and so after the first iteration,
+	or one 'real' operation, half the threads will no longer participate. 
+	
+	*Note, if a thread's start+t and start+blockDim.x*t are both larger than n, the 
+	elements of g_data, that thread will add two zeros for all the iterations it participates
+	in. I am still counting this as a 'real' operation although it has no affect on the 
+	output value. 
+
+	maximum - log2(BLOCK_SIZE) = log2(512) = 9 'real' operations. This is 
+	because we will have 1 thread (thread 0) which will participate in every 
+	operation until partialSum is just 1 element (element 0). Since we lose half the threads
+	for every loop, we will be left with just thread 0 after log2(BLOCK_SIZE) loops.
+
+	average - # block operations / BLOCK_SIZE = Sum(operations during each loop)/BLOCK_SIZE
+		= (2*BLOCK_SIZE-1)/BLOCK_SIZE = 1023/512 = 1.998 ~ 2 'real' operations for my 
+		block size of 512.
+

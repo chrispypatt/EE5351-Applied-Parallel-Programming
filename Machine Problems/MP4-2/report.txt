@@ -1,0 +1,14 @@
+1. Near the top of scan largearray.cu, set #define DEFAULT NUM ELEMENTS
+to 16777216. Set #define MAX RAND to 3. Then, record the performance
+results when you run the code without arguments. Include the host (CPU)
+and device (GPU) processing times and the speedup.
+
+
+2. Describe how you handled input arrays that are not a power of two in size.
+Also describe any other performance-enhancing optimizations you added.
+
+
+3. How do the measured FLOPS rates for the CPU and GPU kernels com-
+pare with each other, and with the theoretical performance limits of each
+architecture? For your GPU implementation, discuss what bottlenecks
+are likely limiting the performance of your code.
