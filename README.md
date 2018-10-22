@@ -8,6 +8,6 @@ Includes:
      - [x] MP2 - Tiled Matrix multiplication
      - [x] MP3 - 2D Convolution
 	 - [x] MP4-1 - Data Parallel Reduction
-	 - [ ] MP4-2 - Parallel Prefix Sum (Scan)
+	 - [x] MP4-2 - Parallel Prefix Sum (Scan)
 
     -Final Project

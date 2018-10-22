@@ -1,20 +1,147 @@
+***********************************************************************
+************** NOTE: unsigned int version of  code. *******************
+***********************************************************************
+
 1. Near the top of scan largearray.cu, set #define DEFAULT NUM ELEMENTS
 to 16777216. Set #define MAX RAND to 3. Then, record the performance
 results when you run the code without arguments. Include the host (CPU)
 and device (GPU) processing times and the speedup.
 
-Processing 16777216 elements...
-CPU Processing time: 84.624052 (ms)
-GPU Processing time: 1.567744 (ms)
-Speedup: 53.978233X
-Test PASSED
+	Processing 16777216 elements...
+	CPU Processing time: 84.624052 (ms)
+	GPU Processing time: 1.567744 (ms)
+	Speedup: 53.978233X
+	Test PASSED
 
 
 2. Describe how you handled input arrays that are not a power of two in size.
 Also describe any other performance-enhancing optimizations you added.
 
+	I handled input arrays which are not a power of 2 by checking the index of the 
+	input array in my kernel. If I am beyond the size of my input array, I pad my 
+	shared memory array with 0s so the shared memory array is a pseudo power of 2.
+	Later this is handled when calculating the final output by checking that the index
+	into this final array exists.
+
+	Other optimizations I added include using shared memory to hide the latency of global memory. 
+	Another optimization is that my shared memory is of size 2*BLOCK_SIZE and each thread does
+	multiple floating point operations. This helps so that bandwidth and FLOPS are high,
+	threads don't just perform one operation and exit. 
 
 3. How do the measured FLOPS rates for the CPU and GPU kernels com-
 pare with each other, and with the theoretical performance limits of each
 architecture? For your GPU implementation, discuss what bottlenecks
 are likely limiting the performance of your code.
+
+	For my code, I get a resulting Integer OPS instead of FLOPS. The resulting rates
+	for the GPU and CPU are as follows:
+
+		CPU: The CPU performs n-1 operations to compute the final array:
+			(16777216-1)ops/84.818840ms = 0.1978 Giga integer ops/s ****************
+
+		GPU: For each level there are n elements in the scan array (scaling down by BLOCK_SIZE=256 each time):
+			16777216 --> 32768 --> 64 -> 1 elements. 
+			So the initial call to prescan is on the full 16777216 elements with two subsequent 
+			calls with size 32768 and 64. Then these results must be added back up to their parent 
+			arrays with tewo calls to addScannedBlockSum of the same sizes. Lastly, one more call t
+			o addScannedBlockSum is made over the whole output array of size 16777216. 
+
+			Each prescan call does 2(n-1) adds in the up-sweep (reduce) phase and n-1 swaps in the down-sweep phase
+			[Parallel Prefix Sum (Scan) with CUDA - Mark Harris] or 3(n-1) total ops. Thus the prescan calls perform:
+
+			3(16777216-1)+3(32768-1)+3(64-1) = 50430100 ops
+
+			Then for the add function to add all the block sums, we perform n operations each
+			(n being the elements in the output array):
+
+			16777216+32768+64 = 16810000
+
+			Thus the total int ops/sec is:
+			(16810000+50430100)/1.57184ms = 42,778,000,000 integer ops/s ***********
+
+
+		CPU: 0.1978 Giga integer ops/s v.s. GPU: 42.778 Giga integer ops/s
+
+	We see a very large increase, of over 100 fold increase of operations per second, in the GPU vs the CPU.
+	This is expected in the CPU to have this low throughput as it's architecture is not meant for this large
+	of datasets to be computed. I am not sure what CPU is actually running in our system but this operation/sec
+	is consistent with other MPs. The CPU is sequential so it has to wait for each element of the array to be calculated 
+	before calculating the next element.
+
+	The GPU is seeing high performance rates but is still quite low for the theoretical throughput of this card. The documentation
+	of this card indicates it should see up to 332GFLOPS with double precision so with integer operations I would expect this to 
+	be much higher. Some factors could be that I don't take inot account bank conflicts which can impact the performance of a kernel
+	when using shared memory. This causes serialization of shared memory accesses to the same memory bank. On top of this, I am
+	not fully using the max threads per block or memory per block which if I carefully crafted my algorith to utilize as much resources
+	per thread as possible, per this GTX 1080Ti's specs, I could see much better performance.
+
+4. Copy the code of your kernel functions at the bottom of your report. 
+
+// Kernel Functions
+__global__ void prescan(unsigned int *g_odata,unsigned int *g_idata, unsigned int *S, int n){
+	__shared__ unsigned int temp[2*BLOCK_SIZE];
+	int t_idx = threadIdx.x, b_idx =  blockIdx.x;
+	int idx = t_idx + b_idx * blockDim.x;
+	int offset = 1;
+
+	//Load into shared memory
+	if (2*idx < n){
+		temp[2*t_idx] = g_idata[2*idx]; 
+	}else{
+		temp[2*t_idx] = 0;
+	}
+	if (2*idx+1 < n){
+		temp[2*t_idx+1] = g_idata[2*idx+1]; 
+	}else{
+		temp[2*t_idx+1] = 0;
+	}
+	for (int d = BLOCK_SIZE;d > 0; d>>=1){
+		__syncthreads();
+		
+		if (t_idx < d){
+			int ai = offset * (2*t_idx+1) - 1;
+			int bi = offset * (2*t_idx+2) - 1;
+
+			temp[bi] += temp[ai];
+		}
+		offset *=2;
+	}
+
+	if (t_idx == 0) { 
+		S[b_idx] = temp[2*blockDim.x-1];
+		temp[2*blockDim.x-1] = 0;
+	}
+
+	for (int d = 1; d < BLOCK_SIZE*2; d*=2){
+		offset >>= 1;
+		__syncthreads();
+
+		if (t_idx < d){
+			int ai = offset * (2*t_idx+1) - 1;
+			int bi = offset * (2*t_idx+2) - 1;
+
+
+			unsigned int t = temp[ai];
+			temp[ai] = temp[bi];
+			temp[bi] += t;	
+		}
+	}
+	__syncthreads();
+	if (2*idx <n){
+		g_odata[2*idx] = temp[2*t_idx];  
+	}
+	if((2*idx + 1) < n){
+		g_odata[2*idx+1] = temp[2*t_idx+1];
+	} 
+}
+
+__global__ void addScannedBlockSum(unsigned int *g_odata, unsigned int *S, int n){//Sum up block sums to later blocks
+	int t_idx = threadIdx.x, b_idx =  blockIdx.x;
+	int idx = t_idx + b_idx * blockDim.x;
+	if (2*idx <n){
+		g_odata[2*idx] += S[b_idx]; 
+	}
+	if((2*idx + 1) < n){
+		g_odata[2*idx+1] += S[b_idx];
+	} 
+}

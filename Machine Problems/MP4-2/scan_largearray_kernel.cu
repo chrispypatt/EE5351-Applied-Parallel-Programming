@@ -23,7 +23,7 @@ unsigned int numAllocations;
 
 void preallocBlockSums(int num_elements){
 	int blockCount = num_elements;
-    unsigned int count = 0;
+	unsigned int count = 0;
     
     while(blockCount > 1){
 		blockCount = (unsigned int)ceil(float(blockCount)/float(2.f*BLOCK_SIZE));
@@ -140,7 +140,7 @@ __global__ void addScannedBlockSum(unsigned int *g_odata, unsigned int *S, int n
 // of TILE_SIZE
 void prescanArray(unsigned int *outArray, unsigned int *inArray, int numElements)
 {	
-	int blocks = numElements/(2*BLOCK_SIZE);
+	int blocks = (int)ceil(double(numElements)/double(2*BLOCK_SIZE));
 	dim3 dimGrid(blocks, 1, 1);
 	dim3 dimBlock(BLOCK_SIZE, 1, 1);
 	//Fill out array with exclusive scan on blocks. blockSums will contain each block's
@@ -154,10 +154,10 @@ void prescanArray(unsigned int *outArray, unsigned int *inArray, int numElements
 		//scan block sums
 		prescan<<<dimGridSums, dimBlock>>>(scanBlockSums[i],blockSums[i],blockSums[i+1],blockCounts[i]); 
 	}
-	for(int j = numAllocations-2; j >= 0; j--){//need to propagate blockSums to later blocks (drill back up)
-		dim3 dimGridSums(blockCounts[j+1], 1, 1);
+	for(int i = numAllocations-2; i >= 0; i--){//need to propagate blockSums to later blocks (drill back up)
+		dim3 dimGridSums(blockCounts[i+1], 1, 1);
 		//Add Scanned Block Sum i to All Values of Scanned Block i + 1
-		addScannedBlockSum<<<dimGridSums, dimBlock>>>(scanBlockSums[j],scanBlockSums[j+1],blockCounts[j]);
+		addScannedBlockSum<<<dimGridSums, dimBlock>>>(scanBlockSums[i],scanBlockSums[i+1],blockCounts[i]);
 	}
 	//finally add last block sum to our output
 	addScannedBlockSum<<<dimGrid,dimBlock>>>(outArray,scanBlockSums[0],numElements);
