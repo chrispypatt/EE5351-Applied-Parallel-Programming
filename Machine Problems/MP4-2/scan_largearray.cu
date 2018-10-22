@@ -11,7 +11,7 @@
 // includes, kernels
 #include "scan_largearray_kernel.cu"
 
-#define DEFAULT_NUM_ELEMENTS 16000000 
+#define DEFAULT_NUM_ELEMENTS 16777216 
 #define MAX_RAND 3
 
 
@@ -20,8 +20,7 @@
 void runTest( int argc, char** argv);
 
 extern "C" 
-unsigned int compare( const unsigned int* reference, const unsigned int* data, 
-                     const unsigned int len);
+unsigned int compare( const unsigned int* reference, const unsigned int* data,const unsigned int len);
 extern "C" 
 void computeGold( unsigned int* reference, unsigned int* idata, const unsigned int len);
 bool CompareArrays(unsigned int *A, unsigned int *B, int size);
@@ -163,8 +162,8 @@ runTest( int argc, char** argv)
 
     free(padded_hdata);
     padded_hdata = NULL;
-    // **===--------------- Allocate data structure here --------------===**
-    // preallocBlockSums(num_elements);
+	// **===--------------- Allocate data structure here --------------===**
+	preallocBlockSums(num_elements);
     // **===-----------------------------------------------------------===**
 
     // Run just once to remove startup overhead for more accurate performance 
@@ -176,7 +175,7 @@ runTest( int argc, char** argv)
     cudaEventCreate(&start);
     cudaEventCreate(&stop);    
     cudaEventRecord(start); 
-    // **===-------------- Modify the body of this function -----------===**
+	// **===-------------- Modify the body of this function -----------===**
     prescanArray(d_odata, d_idata, padded_num_elements);
     // **===-----------------------------------------------------------===**
     cudaEventRecord(stop); 
@@ -188,7 +187,7 @@ runTest( int argc, char** argv)
     printf("Speedup: %fX\n", host_ms/device_ms);
 
     // **===--------------- Deallocate data structure here ------------===**
-    // deallocBlockSums();
+	// deallocBlockSums();
     // **===-----------------------------------------------------------===**
 
 
@@ -252,7 +251,7 @@ void WriteFile(unsigned int* arr, char* file_name, int num_elements)
         exit(1);
     }
     for (unsigned i = 0; i < num_elements; i++) {
-        fprintf(output, "%f ", arr[i]);
+        fprintf(output, "%d ", arr[i]);
     }
 }
 
