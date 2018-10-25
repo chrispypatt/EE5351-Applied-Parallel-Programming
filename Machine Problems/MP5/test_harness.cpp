@@ -92,7 +92,7 @@ int main(int argc, char* argv[])
     /* This is the call you will use to time your parallel implementation */
     TIME_IT("opt_2dhisto",
             50,
-            opt_2dhisto( /* define your own function parameters */ );)
+            opt_2dhisto(input,INPUT_HEIGHT,INPUT_WIDTH,kernel_bins);)
 
     /* Include your teardown code below (temporary variables, function calls, etc.) */
 
