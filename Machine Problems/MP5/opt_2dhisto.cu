@@ -7,6 +7,11 @@
 #include "ref_2dhisto.h"
 #include "opt_2dhisto.h"
 
+int* d_int_histo;
+
+uint8_t* d_histo;
+uint32_t* d_input;
+
 //abandoned, not possible - 1 hour while setting up functional non optimized kernel
 // __device__ uint8_t atomicAdd8Int(uint8_t* address, uint8_t val){ //function to write to uint8_t atomically
 // 	unsigned long long int* address_as_ull = (unsigned long long int*)address;
@@ -51,29 +56,14 @@ __global__ void convert_int2uint8(int *int_histo, int size, uint8_t *histo){
 	}
 }
 
-void opt_2dhisto(uint32_t *input[], size_t height, size_t width, uint8_t bins[HISTO_HEIGHT*HISTO_WIDTH])
+void opt_2dhisto(size_t height, size_t width, uint8_t bins[HISTO_HEIGHT*HISTO_WIDTH])
 {
 	long input_size = height*width;
 	int histo_size = HISTO_HEIGHT*HISTO_WIDTH;
 	//init bins to zero
-	memset(bins, 0, HISTO_HEIGHT*HISTO_WIDTH*sizeof(bins[0]));
-	//setup our device histogram
-	uint32_t* d_input;
-	cudaMalloc((void**)&d_input, input_size*sizeof(uint32_t));
-	for(int i = 0; i < height; ++i){
-		//copy each row of input array to device 
-		CopyInputToDeviceArray((d_input+i*width), width, input[i]);
-    }	
-
-	//uint8_t histogram for output
-	uint8_t* d_histo;
-	cudaMalloc((void**)&d_histo, HISTO_HEIGHT*HISTO_WIDTH*sizeof(uint8_t));
-	cudaMemset(d_histo, 0, HISTO_HEIGHT*HISTO_WIDTH*sizeof(uint8_t));
-
-	//int histogram for calculation. atomicadd works with this
-	int* d_int_histo;
-	cudaMalloc((void**)&d_int_histo, HISTO_HEIGHT*HISTO_WIDTH*sizeof(int));
-	cudaMemset(d_int_histo, 0, HISTO_HEIGHT*HISTO_WIDTH*sizeof(int));
+	memset(bins, 0, histo_size*sizeof(bins[0]));
+	cudaMemset(d_histo, 0, histo_size*sizeof(uint8_t));
+	cudaMemset(d_int_histo, 0, histo_size*sizeof(int));
 
 
 	dim3 dimGrid(ceil((float)input_size/(float)BLOCK_SIZE),1,1);
@@ -88,7 +78,28 @@ void opt_2dhisto(uint32_t *input[], size_t height, size_t width, uint8_t bins[HI
     cudaDeviceSynchronize();
 
 	CopyBinsFromDeviceArray(bins,HISTO_HEIGHT,HISTO_WIDTH,d_histo);
+}
 
+void initData(uint32_t *input[], size_t height, size_t width){
+	//copy input
+	long input_size = height*width;
+	int histo_size = HISTO_HEIGHT*HISTO_WIDTH;
+
+
+	cudaMalloc((void**)&d_input, input_size*sizeof(uint32_t));
+	for(int i = 0; i < height; ++i){
+		//copy each row of input array to device 
+		CopyInputToDeviceArray((d_input+i*width), width, input[i]);
+	}	
+
+	//uint8_t histogram for output
+	cudaMalloc((void**)&d_histo, histo_size*sizeof(uint8_t));
+
+	//int histogram for calculation. atomicadd works with this
+	cudaMalloc((void**)&d_int_histo, histo_size*sizeof(int));
+}
+
+void destructData(){
 	cudaFree(d_histo);
 	cudaFree(d_int_histo);
 	cudaFree(d_input);
