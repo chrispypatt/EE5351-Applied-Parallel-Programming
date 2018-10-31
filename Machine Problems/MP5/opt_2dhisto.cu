@@ -7,23 +7,12 @@
 #include "ref_2dhisto.h"
 #include "opt_2dhisto.h"
 
-int* d_int_histo;
+unsigned int* d_int_histo;
 
 uint8_t* d_histo;
 uint32_t* d_input;
 
-//abandoned, not possible - 1 hour while setting up functional non optimized kernel
-// __device__ uint8_t atomicAdd8Int(uint8_t* address, uint8_t val){ //function to write to uint8_t atomically
-// 	unsigned long long int* address_as_ull = (unsigned long long int*)address;
-// 	unsigned long long int old = *address_as_ull, assumed;
-// 	do{
-// 		assumed = old;	// READ
-// 		old = atomicCAS(address_as_ull, assumed,val + assumed);	// MODIFY + WRITE
-// 	} while (assumed != old);
-// 	return old;
-// }
-
-__global__ void histogram_kernel(uint32_t *buff, long size, int *histo){
+__global__ void histogram_kernel(uint32_t *buff, long size, unsigned int *histo){
 	//start index into buffer
 	int index = threadIdx.x + blockIdx.x * blockDim.x;
 	//stride is however many threads we have running 
@@ -33,21 +22,25 @@ __global__ void histogram_kernel(uint32_t *buff, long size, int *histo){
 	if (threadIdx.x < HISTO_WIDTH) histo_private[threadIdx.x] = 0;
 	__syncthreads();
 	
+	//use private bins to work from shared memory, not global
 	while(index < size){
-		if (histo_private[buff[index]] < UINT8_MAXIMUM){ //Dont rollover!!
+		if (histo_private[buff[index]] < UINT8_MAXIMUM){ //Don't waste time in atomic add if not necessary
 			atomicAdd(&(histo_private[buff[index]]), 1);
 			index += stride;
 		}
 	}
 	__syncthreads();
+	//sum up private bins
 	if(threadIdx.x < HISTO_WIDTH){
-		atomicAdd(&(histo[threadIdx.x]), histo_private[threadIdx.x]);
+		if (histo[threadIdx.x] < UINT8_MAXIMUM){ //Don't waste time in atomic add if not necessary
+			atomicAdd(&(histo[threadIdx.x]), histo_private[threadIdx.x]);
+		}
 	}
 }
 
-__global__ void convert_int2uint8(int *int_histo, int size, uint8_t *histo){
+__global__ void convert_int2uint8(unsigned int *int_histo, uint8_t *histo){
 	int index = threadIdx.x + blockIdx.x * blockDim.x;
-	if(index < size){
+	if(index < HISTO_HEIGHT*HISTO_WIDTH){
 		if (int_histo[index]>UINT8_MAXIMUM){
 			histo[index] = UINT8_MAXIMUM;
 		}else{
@@ -63,7 +56,7 @@ void opt_2dhisto(size_t height, size_t width, uint8_t bins[HISTO_HEIGHT*HISTO_WI
 	//init bins to zero
 	memset(bins, 0, histo_size*sizeof(bins[0]));
 	cudaMemset(d_histo, 0, histo_size*sizeof(uint8_t));
-	cudaMemset(d_int_histo, 0, histo_size*sizeof(int));
+	cudaMemset(d_int_histo, 0, histo_size*sizeof(unsigned int));
 
 
 	dim3 dimGrid(ceil((float)input_size/(float)BLOCK_SIZE),1,1);
@@ -74,7 +67,7 @@ void opt_2dhisto(size_t height, size_t width, uint8_t bins[HISTO_HEIGHT*HISTO_WI
 
 	dimGrid.x = (ceil((float)histo_size/(float)BLOCK_SIZE),1,1);
 
-	convert_int2uint8<<<dimGrid,dimBlock>>>(d_int_histo,histo_size,d_histo);
+	convert_int2uint8<<<dimGrid,dimBlock>>>(d_int_histo,d_histo);
     cudaDeviceSynchronize();
 
 	CopyBinsFromDeviceArray(bins,HISTO_HEIGHT,HISTO_WIDTH,d_histo);
@@ -96,7 +89,7 @@ void initData(uint32_t *input[], size_t height, size_t width){
 	cudaMalloc((void**)&d_histo, histo_size*sizeof(uint8_t));
 
 	//int histogram for calculation. atomicadd works with this
-	cudaMalloc((void**)&d_int_histo, histo_size*sizeof(int));
+	cudaMalloc((void**)&d_int_histo, histo_size*sizeof(unsigned int));
 }
 
 void destructData(){
