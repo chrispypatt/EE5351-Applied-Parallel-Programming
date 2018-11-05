@@ -10,5 +10,6 @@ Includes:
 	 - [x] MP4-1 - Data Parallel Reduction
 	 - [x] MP4-2 - Parallel Prefix Sum (Scan)
 	 - [x] MP5 - Histogramming
+     - [ ] MP6 - Sparse Matrix-Vector Multiplication
 
     -Final Project
