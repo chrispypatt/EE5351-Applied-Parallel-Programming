@@ -18,7 +18,7 @@ make
 ```
 
 For the mode option, select mode 1. There are 2 modes available for this lab:
-• Mode 1 executes the CSR kernel
-• Mode 2 executes the JDS kernel
+* Mode 1 executes the CSR kernel
+* Mode 2 executes the JDS kernel
 
 
