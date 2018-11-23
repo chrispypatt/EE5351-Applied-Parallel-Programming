@@ -63,12 +63,12 @@ void opt_2dhisto(size_t height, size_t width, uint8_t bins[HISTO_HEIGHT*HISTO_WI
 	dim3 dimBlock(BLOCK_SIZE,1,1);
 
 	histogram_kernel<<<dimGrid,dimBlock>>>(d_input,input_size,d_int_histo);
-    cudaDeviceSynchronize();
+	cudaDeviceSynchronize();
 
 	dimGrid.x = (ceil((float)histo_size/(float)BLOCK_SIZE),1,1);
 
 	convert_int2uint8<<<dimGrid,dimBlock>>>(d_int_histo,d_histo);
-    cudaDeviceSynchronize();
+	cudaDeviceSynchronize();
 
 	CopyBinsFromDeviceArray(bins,HISTO_HEIGHT,HISTO_WIDTH,d_histo);
 }

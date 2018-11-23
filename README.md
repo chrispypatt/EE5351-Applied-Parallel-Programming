@@ -13,3 +13,4 @@ Includes:
      - [x] MP6 - Sparse Matrix-Vector Multiplication
 
     -Final Project
+    Groupby with value operations
