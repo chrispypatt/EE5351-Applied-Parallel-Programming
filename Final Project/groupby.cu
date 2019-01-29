@@ -6,6 +6,9 @@
 #include <thrust/functional.h>
 #include <thrust/copy.h>
 #include <thrust/device_vector.h>
+#include <thrust/system/cuda/experimental/pinned_allocator.h>
+#include <thrust/host_vector.h>
+
 #include <thrust/pair.h>
 #include <thrust/execution_policy.h>
 #include "cpuGroupby.h"
@@ -75,6 +78,8 @@ void groupby_GPU(T* key_columns, int num_key_columns, int num_key_rows,
 	typedef thrust::device_vector<int>::iterator IndexIterator;
 
 	// use device vector 
+
+
 	thrust::device_vector<T> d_keys(key_columns, key_columns + num_key_rows * num_key_columns);
 	T* d_keys_raw = thrust::raw_pointer_cast(d_keys.data());
 	thrust::device_vector<T> d_sorted_keys = d_keys;
